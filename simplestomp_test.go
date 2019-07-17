@@ -5,6 +5,19 @@ import (
 	"testing"
 )
 
+// Starts up a rkt? or docker? container prior to running tests
+func setupDockerContainer() {
+}
+
+func TestSendMessage(t *testing.T) {
+}
+
+func TestGetMessage(t *testing.T) {
+}
+
+func TestProcessMessage(t *testing.T) {
+}
+
 func TestAll(t *testing.T) {
 	svc := &simplestomp{
 		Username: "artemis",
