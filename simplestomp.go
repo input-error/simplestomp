@@ -2,6 +2,7 @@ package simplestomp
 
 // https://github.com/go-stomp/stomp/blob/master/examples/client_test/main.go
 import (
+	"context"
 	"fmt"
 	"github.com/go-stomp/stomp"
 	"net"
@@ -55,6 +56,7 @@ func (svc *simplestomp) GetMessage(queue string) (string, error) {
 		stomp.AckAuto,
 		stomp.SubscribeOpt.Header("durable-subscription-name", hostname),
 		stomp.SubscribeOpt.Header("subscription-type", "MULTICAST"))
+	defer subQueue.Unsubscribe()
 
 	if err != nil {
 		return "", err
@@ -65,15 +67,10 @@ func (svc *simplestomp) GetMessage(queue string) (string, error) {
 		return "", msg.Err
 	}
 
-	err = subQueue.Unsubscribe()
-	if err != nil {
-		return "", err
-	}
-
 	return string(msg.Body), nil
 }
 
-func (svc *simplestomp) ProcessMessages(queue string, processFunc func(*stomp.Message) error) error {
+func (svc *simplestomp) ProcessMessages(queue string, ctx context.Context, processFunc func(*stomp.Message) error) error {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return err
@@ -84,24 +81,30 @@ func (svc *simplestomp) ProcessMessages(queue string, processFunc func(*stomp.Me
 		stomp.AckAuto,
 		stomp.SubscribeOpt.Header("durable-subscription-name", hostname),
 		stomp.SubscribeOpt.Header("subscription-type", "MULTICAST"))
+	defer subQueue.Unsubscribe()
 
 	if err != nil {
 		return err
 	}
 
 	for {
-		msg, ok := <-subQueue.C
-		if !ok {
-			// This never is called. Should I use a signal? When signal is SET then stop this loop? Is that even possible since it looks to be blocking on the above?
-			//https://github.com/go-stomp/stomp/blob/master/example_test.go
-			//Not much help here ...
-			break
-		}
+		select {
+		case <-ctx.Done():
+			return nil
+		case msg, ok := <-subQueue.C:
+			if !ok {
+				return nil
+			}
 
-		err := processFunc(msg)
+			if msg.Err != nil {
+				return msg.Err
+			}
 
-		if err != nil {
-			return err
+			err := processFunc(msg)
+
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -125,8 +128,4 @@ func (svc *simplestomp) SendMessage(body string, queue string, contenttype strin
 	}
 
 	return nil
-}
-
-func processMessage(ch chan *stomp.Message) {
-	fmt.Printf("Recv'd message: %s\n", string((<-ch).Body))
 }
