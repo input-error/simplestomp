@@ -4,12 +4,14 @@ package simplestomp
 import (
 	"context"
 	"fmt"
-	"github.com/go-stomp/stomp"
 	"net"
 	"os"
 	"time"
+
+	"github.com/go-stomp/stomp"
 )
 
+// Client wraps the stomp connection and is contains the connection parameters.
 type Client struct {
 	conn     *stomp.Conn
 	Username string
@@ -41,10 +43,12 @@ func (svc *Client) getConnection() (*stomp.Conn, error) {
 	return svc.conn, nil
 }
 
+// Close will gracefully Disconnect the stomp connection.
 func (svc *Client) Close() {
 	svc.conn.Disconnect()
 }
 
+// GetMessage will retrieve a single message from a given queue.
 func (svc *Client) GetMessage(queue string) (string, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -70,7 +74,10 @@ func (svc *Client) GetMessage(queue string) (string, error) {
 	return string(msg.Body), nil
 }
 
-func (svc *Client) ProcessMessages(queue string, ctx context.Context, processFunc func(*stomp.Message) error) error {
+// ProcessMessages will continually receive messages and call the
+// processFunc method passing the message to it each time until
+// the context is Closed.
+func (svc *Client) ProcessMessages(ctx context.Context, queue string, processFunc func(*stomp.Message) error) error {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return err
@@ -81,7 +88,6 @@ func (svc *Client) ProcessMessages(queue string, ctx context.Context, processFun
 		stomp.AckAuto,
 		stomp.SubscribeOpt.Header("durable-subscription-name", hostname),
 		stomp.SubscribeOpt.Header("subscription-type", "MULTICAST"))
-	defer subQueue.Unsubscribe()
 
 	if err != nil {
 		return err
@@ -90,7 +96,7 @@ func (svc *Client) ProcessMessages(queue string, ctx context.Context, processFun
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return subQueue.Unsubscribe()
 		case msg, ok := <-subQueue.C:
 			if !ok {
 				return nil
@@ -105,12 +111,15 @@ func (svc *Client) ProcessMessages(queue string, ctx context.Context, processFun
 			if err != nil {
 				return err
 			}
+		default:
+			// No message recv'd
+			time.Sleep(1 * time.Second)
+			continue
 		}
 	}
-
-	return nil
 }
 
+// SendMessage will send a single message to a given queue.
 func (svc *Client) SendMessage(body string, queue string, contenttype string) error {
 	stompConn, err := svc.getConnection()
 	if err != nil {

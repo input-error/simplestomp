@@ -2,9 +2,10 @@ package simplestomp
 
 import (
 	"context"
-	"github.com/go-stomp/stomp"
 	"testing"
 	"time"
+
+	"github.com/go-stomp/stomp"
 )
 
 func getConnection() *Client {
@@ -56,7 +57,6 @@ func TestGetMessage(t *testing.T) {
 
 func TestProcessMessage(t *testing.T) {
 	svc := getConnection()
-	defer svc.Close()
 
 	err := svc.SendMessage("This is a test 2!", "testqueue", "text/plain")
 	if err != nil {
@@ -64,15 +64,16 @@ func TestProcessMessage(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = svc.ProcessMessages(
-		"testqueue",
+	go svc.ProcessMessages(
 		ctx,
+		"testqueue",
 		func(message *stomp.Message) error {
 			t.Logf("ProcMessages: Msg: %s\n", string(message.Body))
 
 			return message.Err
 		})
 
-	time.Sleep(3)
+	time.Sleep(3 * time.Second)
 	ctx.Done()
+	svc.Close()
 }
