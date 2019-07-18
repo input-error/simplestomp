@@ -50,12 +50,17 @@ func (svc *Client) Close() {
 
 // GetMessage will retrieve a single message from a given queue.
 func (svc *Client) GetMessage(queue string) (string, error) {
+	stompConn, err := svc.getConnection()
+	if err != nil {
+		return "", err
+	}
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		return "", err
 	}
 
-	subQueue, err := svc.conn.Subscribe(
+	subQueue, err := stompConn.Subscribe(
 		fmt.Sprintf("/queue/%s", queue),
 		stomp.AckAuto,
 		stomp.SubscribeOpt.Header("durable-subscription-name", hostname),
@@ -78,12 +83,17 @@ func (svc *Client) GetMessage(queue string) (string, error) {
 // processFunc method passing the message to it each time until
 // the context is Closed.
 func (svc *Client) ProcessMessages(ctx context.Context, queue string, processFunc func(*stomp.Message) error) error {
+	stompConn, err := svc.getConnection()
+	if err != nil {
+		return err
+	}
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		return err
 	}
 
-	subQueue, err := svc.conn.Subscribe(
+	subQueue, err := stompConn.Subscribe(
 		fmt.Sprintf("/queue/%s", queue),
 		stomp.AckAuto,
 		stomp.SubscribeOpt.Header("durable-subscription-name", hostname),
