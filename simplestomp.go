@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type simplestomp struct {
+type Client struct {
 	conn     *stomp.Conn
 	Username string
 	Password string
@@ -18,7 +18,7 @@ type simplestomp struct {
 	Port     int
 }
 
-func (svc *simplestomp) getConnection() (*stomp.Conn, error) {
+func (svc *Client) getConnection() (*stomp.Conn, error) {
 	if svc.conn != nil {
 		return svc.conn, nil
 	}
@@ -41,11 +41,11 @@ func (svc *simplestomp) getConnection() (*stomp.Conn, error) {
 	return svc.conn, nil
 }
 
-func (svc *simplestomp) Close() {
+func (svc *Client) Close() {
 	svc.conn.Disconnect()
 }
 
-func (svc *simplestomp) GetMessage(queue string) (string, error) {
+func (svc *Client) GetMessage(queue string) (string, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return "", err
@@ -70,7 +70,7 @@ func (svc *simplestomp) GetMessage(queue string) (string, error) {
 	return string(msg.Body), nil
 }
 
-func (svc *simplestomp) ProcessMessages(queue string, ctx context.Context, processFunc func(*stomp.Message) error) error {
+func (svc *Client) ProcessMessages(queue string, ctx context.Context, processFunc func(*stomp.Message) error) error {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return err
@@ -111,7 +111,7 @@ func (svc *simplestomp) ProcessMessages(queue string, ctx context.Context, proce
 	return nil
 }
 
-func (svc *simplestomp) SendMessage(body string, queue string, contenttype string) error {
+func (svc *Client) SendMessage(body string, queue string, contenttype string) error {
 	stompConn, err := svc.getConnection()
 	if err != nil {
 		return err

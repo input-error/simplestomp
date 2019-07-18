@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-func getConnection() *simplestomp {
-	svc := simplestomp{
+func getConnection() *Client {
+	svc := Client{
 		Username: "artemis",
 		Password: "artemis",
 		Server:   "localhost",
