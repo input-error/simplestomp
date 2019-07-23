@@ -19,8 +19,69 @@ func getConnection() *Client {
 	return &svc
 }
 
-// Starts up a container using podman or buildah
-func setupContainer() {
+func TestValidateConf_Valid(t *testing.T) {
+	svc := Client{
+		Username: "artemis",
+		Password: "artemis",
+		Server:   "localhost",
+		Port:     61616,
+	}
+
+	if svc.validateConfig() != nil {
+		t.Fatal("A valid configuration should not return an error")
+	}
+}
+
+func TestValidateConf_Username(t *testing.T) {
+	svc := Client{
+		//Username: "artemis",
+		Password: "artemis",
+		Server:   "localhost",
+		Port:     61616,
+	}
+
+	if err := svc.validateConfig(); err == nil {
+		t.Fatal("an empty username should return an error")
+	}
+}
+
+func TestValidateConf_Password(t *testing.T) {
+	svc := Client{
+		Username: "artemis",
+		//Password: "artemis",
+		Server: "localhost",
+		Port:   61616,
+	}
+
+	if err := svc.validateConfig(); err == nil {
+		t.Fatal("an empty password should return an error")
+	}
+}
+
+func TestValidateConf_Server(t *testing.T) {
+	svc := Client{
+		Username: "artemis",
+		Password: "artemis",
+		//Server: "localhost",
+		Port: 61616,
+	}
+
+	if err := svc.validateConfig(); err == nil {
+		t.Fatal("an empty server should return an error")
+	}
+}
+
+func TestValidateConf_Port(t *testing.T) {
+	svc := Client{
+		Username: "artemis",
+		Password: "artemis",
+		Server:   "localhost",
+		//Port: 61616,
+	}
+
+	if err := svc.validateConfig(); err == nil {
+		t.Fatal("an empty or unset port should return an error")
+	}
 }
 
 func TestSendMessage(t *testing.T) {

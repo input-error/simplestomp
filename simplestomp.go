@@ -3,6 +3,7 @@ package simplestomp
 // https://github.com/go-stomp/stomp/blob/master/examples/client_test/main.go
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -13,16 +14,41 @@ import (
 
 // Client wraps the stomp connection and is contains the connection parameters.
 type Client struct {
-	conn     *stomp.Conn
+	Conn     *stomp.Conn
 	Username string
 	Password string
 	Server   string
 	Port     int
 }
 
+func (svc *Client) validateConfig() error {
+	if svc.Username == "" {
+		return errors.New("the Username variable cannot be empty")
+	}
+
+	if svc.Password == "" {
+		return errors.New("the Password variable cannot be empty")
+	}
+
+	if svc.Server == "" {
+		return errors.New("the Server variable cannot be empty")
+	}
+
+	if svc.Port <= 0 {
+		return errors.New("the Port variable cannot be equal to or less than 0")
+	}
+
+	return nil
+
+}
+
 func (svc *Client) getConnection() (*stomp.Conn, error) {
-	if svc.conn != nil {
-		return svc.conn, nil
+	if svc.Conn != nil {
+		return svc.Conn, nil
+	}
+
+	if err := svc.validateConfig(); err != nil {
+		return nil, err
 	}
 
 	netConn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", svc.Server, svc.Port), 10*time.Second)
@@ -35,17 +61,22 @@ func (svc *Client) getConnection() (*stomp.Conn, error) {
 		return nil, err
 	}
 
-	svc.conn, err = stomp.Connect(netConn, stomp.ConnOpt.Login(svc.Username, svc.Password), stomp.ConnOpt.Host(svc.Server), stomp.ConnOpt.Header("client-id", hostname))
+	svc.Conn, err = stomp.Connect(
+		netConn,
+		stomp.ConnOpt.Login(svc.Username, svc.Password),
+		stomp.ConnOpt.Host(svc.Server),
+		stomp.ConnOpt.Header("client-id", hostname),
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	return svc.conn, nil
+	return svc.Conn, nil
 }
 
 // Close will gracefully Disconnect the stomp connection.
 func (svc *Client) Close() {
-	svc.conn.Disconnect()
+	svc.Conn.Disconnect()
 }
 
 // GetMessage will retrieve a single message from a given queue.
